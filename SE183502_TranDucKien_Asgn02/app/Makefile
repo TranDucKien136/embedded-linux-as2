@@ -11,7 +11,6 @@ arm:
 	$(ARM_CC) $(CFLAGS) -static -o sms_app $(SRCS) $(LIBS)
 host:
 	$(CC) $(CFLAGS) -o sms_app_x86 $(SRCS) $(LIBS)
-
 clean:
 	rm -f sms_app sms_app_x86
 .PHONY: arm host clean
