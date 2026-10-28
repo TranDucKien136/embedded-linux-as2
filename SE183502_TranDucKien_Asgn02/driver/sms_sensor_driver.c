@@ -79,7 +79,13 @@ static ssize_t sms_read(struct file *file,
     now = ktime_to_ms(ktime_get());
     sensor_state.last_temp = temp;
     sensor_state.last_humid = humid;
-    sensor_state.last_read_ms = now;
+
+    if (now - sensor_state.last_read_ms
+        < 2LL * sensor_state.interval_ms) {
+        sensor_state.last_read_ms += sensor_state.interval_ms;
+    } else {
+        sensor_state.last_read_ms = now;
+    }
     sensor_state.read_count++;
 
     mutex_unlock(&sensor_state.lock);

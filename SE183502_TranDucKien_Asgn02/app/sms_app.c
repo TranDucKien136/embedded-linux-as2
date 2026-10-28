@@ -13,6 +13,7 @@
 #include <mqueue.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <sys/mman.h>
 #include "circular_buffer.h"
 #include "sensor_thread.h"
 #include "processor_thread.h"
@@ -35,6 +36,7 @@ int main(int argc, char *argv[]) {
     int interval = 500;
     int duration = 60;
     int verbose = 0;
+    int use_fifo = 0;
     int opt;
     int rc;
     unsigned long produced, consumed, overflow;
@@ -51,7 +53,7 @@ int main(int argc, char *argv[]) {
     pthread_t t_sensor, t_proc, t_alert, t_logger;
     time_t start;
 
-    while ((opt = getopt(argc, argv, "i:t:h:d:v")) != -1) {
+    while ((opt = getopt(argc, argv, "i:t:h:d:vr")) != -1) {
         switch (opt) {
         case 'i':
             interval = atoi(optarg);
@@ -73,10 +75,14 @@ int main(int argc, char *argv[]) {
             verbose = 1;
             break;
 
+        case 'r':
+            use_fifo = 1;
+            break;
+
         default:
             fprintf(stderr,
                     "Usage: %s [-i interval_ms] [-t temp_threshold] "
-                    "[-h humid_threshold] [-d duration_seconds] [-v]\n",
+                    "[-h humid_threshold] [-d duration_seconds] [-v] [-r]\n",
                     argv[0]);
             return 2;
         }
@@ -86,7 +92,7 @@ int main(int argc, char *argv[]) {
     if (interval <= 0 || duration < 0) {
         fprintf(stderr,
                 "Usage: %s [-i interval_ms] [-t temp_threshold] "
-                "[-h humid_threshold] [-d duration_seconds] [-v]\n",
+                "[-h humid_threshold] [-d duration_seconds] [-v] [-r]\n",
                 argv[0]);
         return 2;
     }
@@ -99,6 +105,11 @@ int main(int argc, char *argv[]) {
     if (sigaction(SIGINT, &sa, NULL) == -1) {
         perror("sigaction");
         return 1;
+    }
+
+    /* Lock process memory to reduce paging latency */
+    if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1) {
+        perror("mlockall");
     }
 
     mq_unlink(SMS_ALARM_QUEUE);
@@ -138,10 +149,12 @@ int main(int argc, char *argv[]) {
     }
 
     /* Configure sensor thread */
+    /* Configure sensor thread */
     sarg.dev_path = SMS_DEV_PATH;
     sarg.interval_ms = interval;
     sarg.cb = &cb;
     sarg.running = &running;
+    sarg.use_fifo = use_fifo;
 
     /* Configure processor thread */
     parg.cb = &cb;

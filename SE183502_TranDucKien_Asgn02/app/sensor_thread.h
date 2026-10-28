@@ -14,9 +14,10 @@ struct sensor_args {
     int interval_ms;
     struct circular_buffer *cb;
     volatile sig_atomic_t *running;
+    int use_fifo;
 };
 
 /* Sensor thread entry point */
 void *sensor_thread_func(void *arg);
 
-#endif /* SENSOR_THREAD_H */
+#endif
