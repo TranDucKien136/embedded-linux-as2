@@ -120,6 +120,15 @@ int main(int argc, char *argv[]) {
         perror("mlockall");
     }
 
+    FILE *log_check = fopen(SMS_LOG_PATH, "a");
+
+    if (log_check == NULL) {
+        perror("sms_app: cannot open log file");
+        return 1;
+    }
+
+    fclose(log_check);
+
     mq_unlink(SMS_ALARM_QUEUE);
     mq_unlink(SMS_LOG_QUEUE);
 
