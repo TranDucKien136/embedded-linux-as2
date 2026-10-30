@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include "processor_thread.h"
 #include "sms_common.h"
+#include <string.h>
 
 /* Send an alarm message to the alert thread */
 static void send_alarm(mqd_t q,
@@ -18,6 +19,7 @@ static void send_alarm(mqd_t q,
                        float threshold) {
     struct alarm_msg m;
 
+    memset(&m, 0, sizeof(m));
     m.type = t;
     m.timestamp_ms = ts;
     m.value = v;
@@ -120,6 +122,7 @@ void *processor_thread_func(void *arg) {
         have_prev = 1;
 
         /* Send the log message */
+        memset(&lm, 0, sizeof(lm));
         snprintf(lm.text, sizeof(lm.text),
                  "%lld T=%.1f H=%.1f avgT=%.1f avgH=%.1f",
                  d.timestamp_ms,

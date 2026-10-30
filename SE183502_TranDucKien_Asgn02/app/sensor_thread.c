@@ -229,8 +229,8 @@ void *sensor_thread_func(void *arg) {
 
         if (n < 0) {
             if (errno == EINTR || errno == EAGAIN) {
-            continue;
-        }
+                continue;
+            }
 
             perror("sensor_thread: read");
             a->error = 1;

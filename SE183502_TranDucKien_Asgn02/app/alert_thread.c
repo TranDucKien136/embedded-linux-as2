@@ -85,6 +85,7 @@ void *alert_thread_func(void *arg) {
                 m.threshold);
 
         /* Forward the alert to the logger */
+        memset(&lm, 0, sizeof(lm));
         snprintf(lm.text, sizeof(lm.text),
                  "ALERT %s value=%.1f",
                  names[m.type],
