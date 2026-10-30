@@ -145,6 +145,8 @@ void *sensor_thread_func(void *arg) {
 
     if (jitter == NULL) {
         fprintf(stderr, "WARN: cannot allocate jitter buffer\n");
+        a->error = 1;
+        *a->running = 0;
         return NULL;
     }
 
@@ -154,6 +156,8 @@ void *sensor_thread_func(void *arg) {
     if (fd < 0) {
         perror("sensor_thread: open");
         free(jitter);
+        a->error = 1;
+        *a->running = 0;
         return NULL;
     }
 
@@ -167,6 +171,8 @@ void *sensor_thread_func(void *arg) {
         perror("sensor_thread: clock_gettime");
         close(fd);
         free(jitter);
+        a->error = 1;
+        *a->running = 0;
         return NULL;
     }
 
@@ -189,14 +195,18 @@ void *sensor_thread_func(void *arg) {
         } while (rc == EINTR);
 
     if (rc != 0) {
-        fprintf(stderr, "sensor_thread: clock_nanosleep: %s\n",
-        strerror(rc));
-        break;
+            fprintf(stderr, "sensor_thread: clock_nanosleep: %s\n",
+            strerror(rc));
+            a->error = 1;
+            *a->running = 0;
+            break;
         }
 
         /* Measure wake-up jitter before reading the driver */
         if (clock_gettime(CLOCK_MONOTONIC, &actual) == -1) {
             perror("sensor_thread: clock_gettime actual");
+            a->error = 1;
+            *a->running = 0;
             break;
         }
 
@@ -219,10 +229,12 @@ void *sensor_thread_func(void *arg) {
 
         if (n < 0) {
             if (errno == EINTR || errno == EAGAIN) {
-                continue;
-            }
+            continue;
+        }
 
             perror("sensor_thread: read");
+            a->error = 1;
+            *a->running = 0;
             break;
         }
 

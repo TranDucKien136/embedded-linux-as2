@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
     int size;
     float temp_th = 40.0f;
     float humid_th = 80.0f;
+    const char *dev_path = SMS_DEV_PATH;
     struct sigaction sa;
     struct mq_attr attr;
     mqd_t mq_alarm, mq_log;
@@ -53,7 +54,7 @@ int main(int argc, char *argv[]) {
     pthread_t t_sensor, t_proc, t_alert, t_logger;
     time_t start;
 
-    while ((opt = getopt(argc, argv, "i:t:h:d:vr")) != -1) {
+    while ((opt = getopt(argc, argv, "i:t:h:d:vrD:")) != -1) {
         switch (opt) {
         case 'i':
             interval = atoi(optarg);
@@ -79,10 +80,15 @@ int main(int argc, char *argv[]) {
             use_fifo = 1;
             break;
 
+        case 'D':
+            dev_path = optarg;
+            break;
+
         default:
             fprintf(stderr,
                     "Usage: %s [-i interval_ms] [-t temp_threshold] "
-                    "[-h humid_threshold] [-d duration_seconds] [-v] [-r]\n",
+                    "[-h humid_threshold] [-d duration_sec] [-v] [-r] "
+                    "[-D device_path]\n",
                     argv[0]);
             return 2;
         }
@@ -92,7 +98,8 @@ int main(int argc, char *argv[]) {
     if (interval <= 0 || duration < 0) {
         fprintf(stderr,
                 "Usage: %s [-i interval_ms] [-t temp_threshold] "
-                "[-h humid_threshold] [-d duration_seconds] [-v] [-r]\n",
+                "[-h humid_threshold] [-d duration_sec] [-v] [-r] "
+                "[-D device_path]\n",
                 argv[0]);
         return 2;
     }
@@ -108,7 +115,8 @@ int main(int argc, char *argv[]) {
     }
 
     /* Lock process memory to reduce paging latency */
-    if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1) {
+    if (use_fifo) {
+        if (mlockall(MCL_CURRENT | MCL_FUTURE) == -1)
         perror("mlockall");
     }
 
@@ -150,11 +158,12 @@ int main(int argc, char *argv[]) {
 
     /* Configure sensor thread */
     /* Configure sensor thread */
-    sarg.dev_path = SMS_DEV_PATH;
+    sarg.dev_path = dev_path;
     sarg.interval_ms = interval;
     sarg.cb = &cb;
     sarg.running = &running;
     sarg.use_fifo = use_fifo;
+    sarg.error = 0;
 
     /* Configure processor thread */
     parg.cb = &cb;
@@ -254,5 +263,5 @@ int main(int argc, char *argv[]) {
     mq_unlink(SMS_ALARM_QUEUE);
     mq_unlink(SMS_LOG_QUEUE);
 
-    return 0;
+    return sarg.error ? 1 : 0;
 }
